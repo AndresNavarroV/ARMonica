@@ -17,7 +17,7 @@ SPOTIFY_REDIRECT_URI = 'http://127.0.0.1:8888/callback'
 
 # --- Paths ---
 base_path = os.path.dirname(os.path.abspath(__file__))
-csv_path = os.path.join(base_path, "dataset", "spotify_tracks.csv")
+csv_path = os.path.join(base_path, "dataset", "spotify_tracks2.csv")
 model_path = os.path.join(base_path, "model", "recommender.pkl")
 os.makedirs(os.path.dirname(model_path), exist_ok=True)
 
@@ -149,4 +149,5 @@ def recomendar():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
