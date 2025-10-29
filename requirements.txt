@@ -1,7 +1,9 @@
-flask==2.3.3
-gunicorn==23.0.0
-pandas==2.2.2
-numpy==1.26.4
-scikit-learn==1.5.1
-joblib==1.4.2
-spotipy==2.23.0
+Flask==3.1.2
+gunicorn
+pandas==2.3.2
+numpy==2.2.6
+scikit-learn==1.7.2
+joblib==1.5.1
+spotipy==2.25.1
+
+
