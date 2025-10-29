@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: spotify-recommender
+    env: python
+    plan: free
+    buildCommand: ""
+    startCommand: gunicorn app:app
+    envVars:
+      - key: SPOTIFY_CLIENT_ID
+        value: 4b14bcee621141b090bc8402f862dd42
+      - key: SPOTIFY_CLIENT_SECRET
+        value: 89398db9ea9a44908e25575085fbdcc9
+      - key: SPOTIFY_REDIRECT_URI
+        value: http://127.0.0.1:8888/callback
