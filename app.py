@@ -4,13 +4,37 @@ import numpy as np
 from sklearn.neighbors import NearestNeighbors
 import joblib
 import spotipy
+from spotipy.oauth2 import SpotifyOAuth
 import os
 
 # --- Configuración de Flask ---
 app = Flask(__name__)
 
 # --- Configuración de Spotify ---
-SPOTIFY_ACCESS_TOKEN = os.getenv("SPOTIFY_ACCESS_TOKEN", "TU_TOKEN_DE_SPOTIFY_AQUI")
+SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID", "TU_CLIENT_ID_AQUI")
+SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET", "TU_CLIENT_SECRET_AQUI")
+SPOTIFY_REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI", "https://armonica.onrender.com/callback")
+
+# --- Crear manejador de autenticación ---
+scope = "playlist-modify-public playlist-modify-private user-library-read"
+sp_oauth = SpotifyOAuth(
+    client_id=SPOTIFY_CLIENT_ID,
+    client_secret=SPOTIFY_CLIENT_SECRET,
+    redirect_uri=SPOTIFY_REDIRECT_URI,
+    scope=scope,
+    cache_path=os.path.join(os.path.dirname(__file__), ".cache")
+)
+
+def get_spotify_client():
+    """Obtiene un cliente de Spotify renovando el token si es necesario."""
+    token_info = sp_oauth.get_cached_token()
+    if not token_info:
+        return None
+
+    if sp_oauth.is_token_expired(token_info):
+        token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
+
+    return spotipy.Spotify(auth=token_info['access_token'])
 
 # --- Paths ---
 base_path = os.path.dirname(os.path.abspath(__file__))
@@ -96,7 +120,10 @@ def recomendar_playlist_por_genero(generos):
 # --- Crear playlist pública en Spotify ---
 def crear_playlist_en_spotify(nombre, track_uris):
     try:
-        sp = spotipy.Spotify(auth=SPOTIFY_ACCESS_TOKEN)
+        sp = get_spotify_client()
+        if not sp:
+            return "Error: no hay token de Spotify válido."
+
         user_id = sp.me()["id"]
         playlist = sp.user_playlist_create(user=user_id, name=nombre, public=True)
         sp.playlist_add_items(playlist_id=playlist['id'], items=track_uris)
