@@ -141,7 +141,7 @@ def recomendar():
     if not genero:
         return jsonify({"error": "Debe proporcionar un género"}), 400
 
-    resultado = recomendar_playlist_por_genero([genero])
+    resultado = recomendar_playlist_por_genero([genero.lower()])
     if "error" in resultado:
         return jsonify(resultado), 404
 
@@ -153,4 +153,5 @@ def recomendar():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
