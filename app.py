@@ -141,17 +141,39 @@ def recomendar():
     if not genero:
         return jsonify({"error": "Debe proporcionar un género"}), 400
 
-    resultado = recomendar_playlist_por_genero([genero.lower()])
+    # --- Normalización idéntica a Laravel ---
+    import unicodedata
+    def normalize(texto):
+        if not texto:
+            return ""
+        texto = texto.strip().lower()
+        texto = ''.join(
+            c for c in unicodedata.normalize('NFD', texto)
+            if unicodedata.category(c) != 'Mn'
+        )  # elimina acentos
+        return texto
+
+    genero_norm = normalize(genero)
+
+    print(f"🛰️ Género recibido: '{genero}' → Normalizado: '{genero_norm}'")
+
+    resultado = recomendar_playlist_por_genero([genero_norm])
+
     if "error" in resultado:
+        print(f"⚠️ No se encontraron canciones para: {genero_norm}")
         return jsonify(resultado), 404
 
     uris = [c["uri"] for c in resultado["canciones"]]
-    resultado["playlist_url"] = crear_playlist_en_spotify(f"Playlist IA - {genero.capitalize()}", uris)
+    resultado["playlist_url"] = crear_playlist_en_spotify(
+        f"Playlist IA - {genero.capitalize()}",
+        uris
+    )
 
+    print(f"✅ Playlist creada con {len(uris)} canciones para {genero_norm}")
     return jsonify(resultado)
-
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
 
