@@ -5,12 +5,18 @@ from sklearn.neighbors import NearestNeighbors
 import joblib
 import spotipy
 import os
+import json
+import time
+import requests
 
 # --- Configuración de Flask ---
 app = Flask(__name__)
 
-# --- Configuración de Spotify ---
-SPOTIFY_ACCESS_TOKEN = os.getenv("SPOTIFY_ACCESS_TOKEN", "TU_TOKEN_DE_SPOTIFY_AQUI")
+# --- Configuración de Spotify (Render) ---
+SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
+SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
+SPOTIFY_REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
+SPOTIFY_CACHE_JSON = os.getenv("SPOTIFY_CACHE_JSON")
 
 # --- Paths ---
 base_path = os.path.dirname(os.path.abspath(__file__))
@@ -42,7 +48,7 @@ print("✅ Dataset cargado correctamente")
 print(f"🎵 Total canciones: {len(df)}")
 print(f"🎶 Géneros disponibles: {df['genre'].unique()}")
 
-# --- Modelo global de respaldo ---
+# --- Modelo global ---
 if os.path.exists(model_path):
     model = joblib.load(model_path)
 else:
@@ -50,7 +56,43 @@ else:
     model.fit(df[features])
     joblib.dump(model, model_path)
 
-# --- Recomendación ---
+# --- Refrescador automático de token ---
+def get_spotify_token():
+    """
+    Refresca automáticamente el access_token usando el refresh_token de SPOTIFY_CACHE_JSON.
+    """
+    if not SPOTIFY_CACHE_JSON:
+        raise Exception("No se encontró la variable SPOTIFY_CACHE_JSON.")
+
+    spotify_cache = json.loads(SPOTIFY_CACHE_JSON)
+    now = int(time.time())
+
+    if now >= spotify_cache.get("expires_at", 0):
+        print("🔄 Token expirado. Refrescando...")
+
+        response = requests.post(
+            "https://accounts.spotify.com/api/token",
+            data={
+                "grant_type": "refresh_token",
+                "refresh_token": spotify_cache["refresh_token"],
+                "client_id": SPOTIFY_CLIENT_ID,
+                "client_secret": SPOTIFY_CLIENT_SECRET,
+            },
+        )
+
+        if response.status_code != 200:
+            raise Exception(f"Error al refrescar token: {response.text}")
+
+        new_data = response.json()
+        spotify_cache["access_token"] = new_data["access_token"]
+        spotify_cache["expires_at"] = now + new_data.get("expires_in", 3600)
+
+        os.environ["SPOTIFY_CACHE_JSON"] = json.dumps(spotify_cache)
+        print("✅ Token actualizado correctamente.")
+
+    return spotify_cache["access_token"]
+
+# --- Recomendación de canciones ---
 def recomendar_playlist_por_genero(generos):
     generos = [g.lower().strip() for g in generos]
     df_genero = df[df['genre'].isin(generos)]
@@ -96,11 +138,15 @@ def recomendar_playlist_por_genero(generos):
 # --- Crear playlist pública en Spotify ---
 def crear_playlist_en_spotify(nombre, track_uris):
     try:
-        sp = spotipy.Spotify(auth=SPOTIFY_ACCESS_TOKEN)
+        token = get_spotify_token()
+        sp = spotipy.Spotify(auth=token)
+
         user_id = sp.me()["id"]
         playlist = sp.user_playlist_create(user=user_id, name=nombre, public=True)
         sp.playlist_add_items(playlist_id=playlist['id'], items=track_uris)
+
         return playlist["external_urls"]["spotify"]
+
     except Exception as e:
         return f"Error al crear playlist: {str(e)}"
 
@@ -122,7 +168,7 @@ def recomendar():
 
     return jsonify(resultado)
 
+# --- Servidor principal ---
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-
