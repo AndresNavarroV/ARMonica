@@ -11,10 +11,10 @@ import json
 # --- Configuración de Flask ---
 app = Flask(__name__)
 
-# --- Configuración de Spotify ---
-SPOTIFY_CLIENT_ID="4b14bcee621141b090bc8402f862dd42"
-SPOTIFY_CLIENT_SECRET="89398db9ea9a44908e25575085fbdcc9"
-SPOTIFY_REDIRECT_URI=https://armonica.onrender.com/callback
+SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID", "4b14bcee621141b090bc8402f862dd42")
+SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET", "89398db9ea9a44908e25575085fbdcc9")
+SPOTIFY_REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI", "https://armonica.onrender.com/callback")
+
 
 # --- Rutas base ---
 base_path = os.path.dirname(os.path.abspath(__file__))
@@ -171,4 +171,5 @@ def recomendar():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
